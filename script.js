@@ -28,6 +28,7 @@ class Accordion {
 }
 
 const STORAGE_KEY = 'timer_data';
+const MAX_BALANCE = 359999000;
 let state;
 let timerId;
 
@@ -80,15 +81,21 @@ function updateBalance() {
     const elapsed = currentTime - state.lastTimestamp;
 
     if (state.mode === 'earning') {
-        state.balance += elapsed;
+        state.balance = Math.min(state.balance + elapsed, MAX_BALANCE);
     } else if (state.mode === 'using') {
-        state.balance = Math.max(state.balance - elapsed, 0)
+        state.balance = Math.max(state.balance - elapsed, 0);
     }
     state.lastTimestamp = currentTime;
 }
 
 function earning() {
     updateBalance();
+
+    if (state.balance >= MAX_BALANCE) {
+        state.balance = MAX_BALANCE;
+        stop();
+        return;
+    }
 
     textEarn.textContent = 'Now Earning...';
     textUse.textContent = 'Use';
@@ -97,8 +104,13 @@ function earning() {
 
     timerId = setInterval(() => {
         const elapsed = Date.now() - state.lastTimestamp;
+        const currentBalance = state.balance + elapsed;
 
-        render(state.balance + elapsed);
+        if (currentBalance >= MAX_BALANCE) {
+            stop();
+        } else {
+            render(currentBalance);
+        }
     }, 100);
 }
 
