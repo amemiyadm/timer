@@ -82,15 +82,16 @@ function updateBalance() {
     if (state.mode === 'earning') {
         state.balance += elapsed;
     } else if (state.mode === 'using') {
-        state.balance -= elapsed;
+        state.balance = Math.max(state.balance - elapsed, 0)
     }
     state.lastTimestamp = currentTime;
 }
 
 function earning() {
+    updateBalance();
+
     textEarn.textContent = 'Now Earning...';
     textUse.textContent = 'Use';
-    updateBalance();
     state.mode = 'earning';
     saveData();
 
@@ -102,9 +103,16 @@ function earning() {
 }
 
 function using() {
+    updateBalance();
+
+    if (state.balance <= 0) {
+        state.balance = 0;
+        stop();
+        return;
+    }
+
     textEarn.textContent = 'Earn';
     textUse.textContent = 'Now Using...';
-    updateBalance();
     state.mode = 'using';
     saveData();
 
