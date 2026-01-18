@@ -29,6 +29,8 @@ class Accordion {
 
 const STORAGE_KEY = 'timer_data';
 const MAX_BALANCE = 359999000;
+const FOUR_HOURS = 14400000;
+const BONUS_HOUR = 14;
 let state;
 let timerId;
 
@@ -46,6 +48,7 @@ const inputS = document.getElementById('input-s');
 
 function init() {
     state = loadData();
+    handleLoginBonus();
 
     if (state.mode === 'earning') {
         earning();
@@ -64,8 +67,9 @@ function loadData() {
     } else {
         return {
             balance: 0,
-            lastTimestamp: Date.now(),
-            mode: 'stopped'
+            last_time_stamp: Date.now(),
+            mode: 'stopped',
+            next_bonus_time_stamp: new Date().setHours(BONUS_HOUR, 0, 0)
         }
     }
 }
@@ -74,18 +78,34 @@ function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function handleLoginBonus() {
+    const currentTimestamp = Date.now();
+
+    if (currentTimestamp < state.next_bonus_time_stamp) return;
+
+    const nextBonusTimeStamp = new Date(currentTimestamp);
+    nextBonusTimeStamp.setDate(nextBonusTimeStamp.getDate() + 1);
+    nextBonusTimeStamp.setHours(BONUS_HOUR, 0, 0);
+
+    state.next_bonus_time_stamp = nextBonusTimeStamp.getTime();
+    state.balance += FOUR_HOURS;
+    saveData();
+
+    alert('ログインボーナスの4時間が付与されました。');
+}
+
 function updateBalance() {
     clearInterval(timerId);
 
-    const currentTime = Date.now();
-    const elapsed = currentTime - state.lastTimestamp;
+    const currentTimestamp = Date.now();
+    const elapsed = currentTimestamp - state.last_time_stamp;
 
     if (state.mode === 'earning') {
         state.balance = Math.min(state.balance + elapsed, MAX_BALANCE);
     } else if (state.mode === 'using') {
         state.balance = Math.max(state.balance - elapsed, 0);
     }
-    state.lastTimestamp = currentTime;
+    state.last_time_stamp = currentTimestamp;
 }
 
 function earning() {
@@ -103,7 +123,7 @@ function earning() {
     saveData();
 
     timerId = setInterval(() => {
-        const elapsed = Date.now() - state.lastTimestamp;
+        const elapsed = Date.now() - state.last_time_stamp;
         const currentBalance = state.balance + elapsed;
 
         if (currentBalance >= MAX_BALANCE) {
@@ -129,7 +149,7 @@ function using() {
     saveData();
 
     timerId = setInterval(() => {
-        const elapsed = Date.now() - state.lastTimestamp;
+        const elapsed = Date.now() - state.last_time_stamp;
         const currentBalance = state.balance - elapsed;
 
         if (currentBalance <= 0) {
